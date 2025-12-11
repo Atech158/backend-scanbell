@@ -149,12 +149,19 @@ async def require_auth(request: Request) -> User:
 # ==========================
 @api_router.post("/save-token")
 async def save_token(request: Request):
-    data = await request.json()
+    try:
+        data = await request.json()
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid JSON: {str(e)}")
+    
     user_id = data.get("userId")
     fcm_token = data.get("fcmToken")
 
-    if not fcm_token:
+    if not fcm_token or not fcm_token.strip():
         raise HTTPException(status_code=400, detail="FCM token is required")
+    
+    if not user_id:
+        raise HTTPException(status_code=400, detail="User ID is required")
 
     await save_token_db(user_id, fcm_token)
 
