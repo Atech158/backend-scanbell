@@ -11,6 +11,9 @@ from typing import List, Optional
 import uuid
 from datetime import datetime, timezone, time
 import httpx
+from token_model import save_token_db
+from fastapi import Request
+
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -124,7 +127,26 @@ async def require_auth(request: Request) -> User:
         raise HTTPException(status_code=401, detail="Not authenticated")
     return user
 
+#Save Fcm route
+
+@app.post("/save-token")
+async def save_token(request: Request):
+    data = await request.json()
+    user_id = data.get("userId", None)
+    fcm_token = data.get("fcmToken")
+
+    if not fcm_token:
+        return {"error": "FCM token is required"}
+
+    save_token_db(user_id, fcm_token)
+
+    return {"success": True, "message": "Token saved"}
+
+
+
 # ==================== AUTH ROUTES ====================
+
+
 
 @api_router.post("/auth/session")
 async def create_session(request: Request, response: Response):
