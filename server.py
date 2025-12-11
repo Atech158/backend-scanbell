@@ -448,24 +448,35 @@ async def send_signal(request: Request):
     base_user_id = room_id.split("-")[0] if "-" in room_id and len(room_id) > 36 else room_id
     
     # If visitor is ringing, create call history
-    if message_type == "ring" and sender_type == "visitor":
-        visitor_ip = request.client.host if request.client else "unknown"
-        
-        # Check if blocked
-        settings = await db.doorbell_settings.find_one({"user_id": base_user_id})
-        if settings and visitor_ip in settings.get("blocked_ips", []):
-            raise HTTPException(status_code=403, detail="You have been blocked")
-        
-        call = CallHistory(
-            user_id=base_user_id,
-            visitor_name=payload.get("visitor_name", "Unknown Visitor"),
-            visitor_ip=visitor_ip,
-            status="missed"
+if message_type == "ring" and sender_type == "visitor":
+    visitor_ip = request.client.host if request.client else "unknown"
+
+    settings = await db.doorbell_settings.find_one({"user_id": base_user_id})
+    if settings and visitor_ip in settings.get("blocked_ips", []):
+        raise HTTPException(status_code=403, detail="You have been blocked")
+
+    call = CallHistory(
+        user_id=base_user_id,
+        visitor_name=payload.get("visitor_name", "Unknown Visitor"),
+        visitor_ip=visitor_ip,
+        status="missed"
+    )
+    call_dict = call.model_dump()
+    call_dict["created_at"] = call_dict["created_at"].isoformat()
+    await db.call_history.insert_one(call_dict)
+    payload["call_id"] = call.id
+
+    # 🔥 Fetch FCM token from MongoDB
+    user_fcm = await db.fcm_tokens.find_one({"user_id": base_user_id})
+
+    # 🔥 If user has notification token, send push notification
+    if user_fcm:
+        await send_fcm_notification(
+            user_fcm["token"],
+            "🔔 Someone is at your door!",
+            f"Visitor: {payload.get('visitor_name', 'Unknown')}"
         )
-        call_dict = call.model_dump()
-        call_dict["created_at"] = call_dict["created_at"].isoformat()
-        await db.call_history.insert_one(call_dict)
-        payload["call_id"] = call.id
+
     
     message = SignalingMessage(
         room_id=room_id,
