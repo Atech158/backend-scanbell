@@ -23,6 +23,23 @@ mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ.get('DB_NAME', 'scanbell_db')]
 
+# ==========================
+#  SAVE FCM TOKEN IN DATABASE
+# ==========================
+async def save_token_db(user_id: str, fcm_token: str):
+    """Save or update FCM token in MongoDB"""
+    if not user_id:
+        return
+
+    await db.fcm_tokens.update_one(
+        {"user_id": user_id},
+        {"$set": {
+            "token": fcm_token,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }},
+        upsert=True
+    )
+
 # Auth URL
 AUTH_SESSION_URL = "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data"
 
@@ -127,20 +144,22 @@ async def require_auth(request: Request) -> User:
         raise HTTPException(status_code=401, detail="Not authenticated")
     return user
 
-#Save Fcm route
-
+# ==========================
+#  SAVE FCM TOKEN ROUTE
+# ==========================
 @app.post("/save-token")
 async def save_token(request: Request):
     data = await request.json()
-    user_id = data.get("userId", None)
+    user_id = data.get("userId")
     fcm_token = data.get("fcmToken")
 
     if not fcm_token:
-        return {"error": "FCM token is required"}
+        raise HTTPException(status_code=400, detail="FCM token is required")
 
-    save_token_db(user_id, fcm_token)
+    await save_token_db(user_id, fcm_token)
 
     return {"success": True, "message": "Token saved"}
+
 
 
 
