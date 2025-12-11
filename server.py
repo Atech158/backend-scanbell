@@ -467,56 +467,56 @@ async def send_signal(request: Request):
     base_user_id = room_id.split("-")[0] if "-" in room_id and len(room_id) > 36 else room_id
     
     # If visitor is ringing, create call history
-if message_type == "ring" and sender_type == "visitor":
-    visitor_ip = request.client.host if request.client else "unknown"
+    if message_type == "ring" and sender_type == "visitor":
+        visitor_ip = request.client.host if request.client else "unknown"
 
-    settings = await db.doorbell_settings.find_one({"user_id": base_user_id})
-    if settings and visitor_ip in settings.get("blocked_ips", []):
-        raise HTTPException(status_code=403, detail="You have been blocked")
+        settings = await db.doorbell_settings.find_one({"user_id": base_user_id})
+        if settings and visitor_ip in settings.get("blocked_ips", []):
+            raise HTTPException(status_code=403, detail="You have been blocked")
 
-    call = CallHistory(
-        user_id=base_user_id,
-        visitor_name=payload.get("visitor_name", "Unknown Visitor"),
-        visitor_ip=visitor_ip,
-        status="missed"
-    )
-    call_dict = call.model_dump()
-    call_dict["created_at"] = call_dict["created_at"].isoformat()
-    await db.call_history.insert_one(call_dict)
-    payload["call_id"] = call.id
-
-    # 🔥 Fetch FCM token from MongoDB
-    user_fcm = await db.fcm_tokens.find_one({"user_id": base_user_id})
-
-    # 🔥 If user has notification token, send push notification
-    if user_fcm:
-        await send_fcm_notification(
-            user_fcm["token"],
-            "🔔 Someone is at your door!",
-            f"Visitor: {payload.get('visitor_name', 'Unknown')}"
+        call = CallHistory(
+            user_id=base_user_id,
+            visitor_name=payload.get("visitor_name", "Unknown Visitor"),
+            visitor_ip=visitor_ip,
+            status="missed"
         )
+        call_dict = call.model_dump()
+        call_dict["created_at"] = call_dict["created_at"].isoformat()
+        await db.call_history.insert_one(call_dict)
+        payload["call_id"] = call.id
 
-    
-    message = SignalingMessage(
-        room_id=room_id,
-        sender_type=sender_type,
-        message_type=message_type,
-        payload=payload
-    )
-    msg_dict = message.model_dump()
-    msg_dict["created_at"] = msg_dict["created_at"].isoformat()
-    await db.signaling.insert_one(msg_dict)
-    
-    # If call is answered, update call history
-    if message_type == "accept" and sender_type == "owner":
-        call_id = payload.get("call_id")
-        if call_id:
-            await db.call_history.update_one(
-                {"id": call_id},
-                {"$set": {"status": "answered"}}
+        # 🔥 Fetch FCM token from MongoDB
+        user_fcm = await db.fcm_tokens.find_one({"user_id": base_user_id})
+
+        # 🔥 If user has notification token, send push notification
+        if user_fcm:
+            await send_fcm_notification(
+                user_fcm["token"],
+                "🔔 Someone is at your door!",
+                f"Visitor: {payload.get('visitor_name', 'Unknown')}"
             )
-    
-    return {"message_id": message.id}
+
+        
+        message = SignalingMessage(
+            room_id=room_id,
+            sender_type=sender_type,
+            message_type=message_type,
+            payload=payload
+        )
+        msg_dict = message.model_dump()
+        msg_dict["created_at"] = msg_dict["created_at"].isoformat()
+        await db.signaling.insert_one(msg_dict)
+        
+        # If call is answered, update call history
+        if message_type == "accept" and sender_type == "owner":
+            call_id = payload.get("call_id")
+            if call_id:
+                await db.call_history.update_one(
+                    {"id": call_id},
+                    {"$set": {"status": "answered"}}
+                )
+        
+        return {"message_id": message.id}
 
 @api_router.get("/signaling/poll/{room_id}")
 async def poll_signals(room_id: str, sender_type: str, last_id: Optional[str] = None):
