@@ -147,7 +147,7 @@ async def require_auth(request: Request) -> User:
 # ==========================
 #  SAVE FCM TOKEN ROUTE
 # ==========================
-@app.post("/save-token")
+@api_router.post("/save-token")
 async def save_token(request: Request):
     data = await request.json()
     user_id = data.get("userId")
