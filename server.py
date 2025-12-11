@@ -13,6 +13,23 @@ from datetime import datetime, timezone, time
 import httpx
 from token_model import save_token_db
 from fastapi import Request
+from fastapi.middleware.cors import CORSMiddleware
+
+app = FastAPI()
+
+# ==========================
+#  CORS CONFIG FOR NETLIFY
+# ==========================
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://scanbell.netlify.app",
+        "http://localhost:3000"
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 ROOT_DIR = Path(__file__).parent
@@ -22,6 +39,8 @@ load_dotenv(ROOT_DIR / '.env')
 mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ.get('DB_NAME', 'scanbell_db')]
+
+
 
 # ==========================
 #  SAVE FCM TOKEN IN DATABASE
