@@ -14,22 +14,6 @@ from token_model import save_token_db
 from fastapi import Request
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI()
-
-# ==========================
-#  CORS CONFIG FOR NETLIFY
-# ==========================
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "https://scanbell.netlify.app",
-        "http://localhost:3000"
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -63,6 +47,21 @@ AUTH_SESSION_URL = "https://demobackend.emergentagent.com/auth/v1/env/oauth/sess
 
 app = FastAPI(title="ScanBell API")
 api_router = APIRouter(prefix="/api")
+
+# ==========================
+#  CORS CONFIG FOR NETLIFY
+# ==========================
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://scanbell.netlify.app",
+        "http://localhost:3000"
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -592,6 +591,7 @@ async def root():
 async def health():
     return {"status": "healthy"}
 
+app.include_router(api_router)
 
 
 @app.on_event("shutdown")
