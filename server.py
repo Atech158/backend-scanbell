@@ -53,14 +53,13 @@ api_router = APIRouter(prefix="/api")
 # ==========================
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://scanbell.netlify.app",
-        "http://localhost:3000"
-    ],
+    allow_origins=["https://scanbell.netlify.app"],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
+    expose_headers=["Set-Cookie"]
 )
+
 
 
 # Configure logging
@@ -261,15 +260,15 @@ async def create_session(request: Request, response: Response):
     await db.user_sessions.insert_one(session_dict)
     
     # Set cookie
-    response.set_cookie(
-        key="session_token",
-        value=session_token,
-        httponly=True,
-        secure=True,
-        samesite="none",
-        path="/",
-        max_age=7 * 24 * 60 * 60
-    )
+ response.set_cookie(
+    key="session_token",
+    value=session_token,
+    httponly=True,
+    secure=True,
+    samesite="none",
+    path="/"
+)
+
     
     user_data = await db.users.find_one({"id": user_id}, {"_id": 0})
     return {"user": user_data, "session_token": session_token}
