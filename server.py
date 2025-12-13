@@ -55,10 +55,10 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://scanbell.netlify.app"],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type"],
-    expose_headers=["Set-Cookie"]
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
+
 
 
 
@@ -261,13 +261,14 @@ async def create_session(request: Request, response: Response):
     
     # Set cookie
     response.set_cookie(
-       key="session_token",
-       value=session_token,
-       httponly=True,
-       secure=True,
-       samesite="none",
-       path="/"
-    )
+    key="session_token",
+    value=session_token,
+    httponly=True,
+    secure=True,
+    samesite="none",
+    domain=".onrender.com",
+    path="/"
+)
 
     
     user_data = await db.users.find_one({"id": user_id}, {"_id": 0})
@@ -275,11 +276,11 @@ async def create_session(request: Request, response: Response):
 
 @api_router.get("/auth/me")
 async def get_me(request: Request):
-    """Get current user"""
     user = await get_current_user(request)
     if not user:
         raise HTTPException(status_code=401, detail="Not authenticated")
-    return user.model_dump()
+    return JSONResponse(content=user.model_dump())
+
 
 @api_router.post("/auth/logout")
 async def logout(request: Request, response: Response):
