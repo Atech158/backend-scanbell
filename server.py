@@ -12,7 +12,7 @@ from datetime import datetime, timezone, time
 import httpx
 from token_model import save_token_db
 from fastapi import Request
-from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.cors import CORSMiddleware
 
 
 ROOT_DIR = Path(__file__).parent
@@ -47,20 +47,6 @@ AUTH_SESSION_URL = "https://demobackend.emergentagent.com/auth/v1/env/oauth/sess
 
 app = FastAPI(title="ScanBell API")
 api_router = APIRouter(prefix="/api")
-
-# ==========================
-#  CORS CONFIG FOR NETLIFY
-# ==========================
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["https://scanbell.netlify.app"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-
-
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -260,15 +246,15 @@ async def create_session(request: Request, response: Response):
     await db.user_sessions.insert_one(session_dict)
     
     # Set cookie
-    response.set_cookie(
-    key="session_token",
-    value=session_token,
-    httponly=True,
-    secure=True,
-    samesite="none",
-    domain=".onrender.com",
-    path="/"
-)
+      response.set_cookie(
+        key="session_token",
+        value=session_token,
+        httponly=True,
+        secure=True,
+        samesite="none",
+        path="/",
+        max_age=7 * 24 * 60 * 60
+    )
 
     
     user_data = await db.users.find_one({"id": user_id}, {"_id": 0})
@@ -593,6 +579,13 @@ async def health():
 
 app.include_router(api_router)
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_credentials=True,
+    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
