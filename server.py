@@ -246,14 +246,14 @@ async def create_session(request: Request, response: Response):
     await db.user_sessions.insert_one(session_dict)
     
     # Set cookie
-      response.set_cookie(
-        key="session_token",
-        value=session_token,
-        httponly=True,
-        secure=True,
-        samesite="none",
-        path="/",
-        max_age=7 * 24 * 60 * 60
+    response.set_cookie(
+       key="session_token",
+       value=session_token,
+       httponly=True,
+       secure=True,
+       samesite="none",
+       path="/",
+       max_age=7 * 24 * 60 * 60
     )
 
     
