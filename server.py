@@ -260,14 +260,14 @@ async def create_session(request: Request, response: Response):
     await db.user_sessions.insert_one(session_dict)
     
     # Set cookie
- response.set_cookie(
-    key="session_token",
-    value=session_token,
-    httponly=True,
-    secure=True,
-    samesite="none",
-    path="/"
-)
+    response.set_cookie(
+       key="session_token",
+       value=session_token,
+       httponly=True,
+       secure=True,
+       samesite="none",
+       path="/"
+    )
 
     
     user_data = await db.users.find_one({"id": user_id}, {"_id": 0})
